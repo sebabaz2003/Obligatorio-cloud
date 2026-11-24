@@ -1,0 +1,20 @@
+# Archivos temporales de Terraform
+**/.terraform/*
+
+# Estado de Terraform
+*.tfstate
+*.tfstate.*
+
+# Variables que pueden contener credenciales
+*.tfvars
+*.tfvars.json
+
+# Archivos de planes
+*.tfplan
+
+# Claves privadas
+*.pem
+*.key
+
+# Archivos temporales
+.terraform.tfstate.lock.info
