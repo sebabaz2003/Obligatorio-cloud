@@ -60,3 +60,25 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+
+# Alarma cuando hay menos de 2 servidores saludables
+resource "aws_cloudwatch_metric_alarm" "healthy_hosts" {
+  alarm_name        = "${aws_lb.app.name}-healthy-hosts"
+  alarm_description = "Alerta cuando el ALB tiene menos de 2 servidores saludables"
+
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "HealthyHostCount"
+  comparison_operator = "LessThanThreshold"
+  threshold           = 2
+
+  statistic          = "Minimum"
+  period             = 60
+  evaluation_periods = 2
+  treat_missing_data = "missing"
+
+  dimensions = {
+    LoadBalancer = aws_lb.app.arn_suffix
+    TargetGroup  = aws_lb_target_group.app.arn_suffix
+  }
+}
+
