@@ -18,3 +18,15 @@
 
 # Archivos temporales
 .terraform.tfstate.lock.info
+
+# Archivos compilados de la aplicacion
+/artifacts/*.war
+
+# Credenciales de AWS y variables de entorno
+.aws/
+.env
+.env.*
+
+# Logs de Terraform
+crash.log
+crash.*.log

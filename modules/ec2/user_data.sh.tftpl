@@ -1,0 +1,84 @@
+
+#!/bin/bash
+set -euo pipefail
+
+echo "Iniciando instalacion de la aplicacion..."
+
+# 1. Instalar Java 17 y Tomcat 10
+dnf install -y java-17-amazon-corretto-headless tomcat10 python3
+
+# 2. Detener Tomcat antes del despliegue
+systemctl stop tomcat10 || true
+
+# 3. Descargar el WAR desde S3
+echo "Descargando WAR desde S3..."
+
+mkdir -p /var/lib/tomcat10/webapps
+
+aws s3 cp \
+  "s3://${war_bucket_name}/${war_object_key}" \
+  /var/lib/tomcat10/webapps/ROOT.war \
+  --region "${aws_region}"
+
+chmod 644 /var/lib/tomcat10/webapps/ROOT.war
+
+# 4. Obtener credenciales de RDS desde Secrets Manager
+echo "Configurando conexion a PostgreSQL..."
+
+install -d -m 700 /etc/ecommerce
+
+python3 - <<'PY'
+import json
+import os
+import subprocess
+
+secret = subprocess.check_output(
+    [
+        "aws", "secretsmanager", "get-secret-value",
+        "--secret-id", "${db_secret_arn}",
+        "--region", "${aws_region}",
+        "--query", "SecretString",
+        "--output", "text"
+    ],
+    text=True
+)
+
+credentials = json.loads(secret)
+
+variables = {
+    "DB_HOST": "${db_host}",
+    "DB_PORT": "${db_port}",
+    "DB_NAME": "${db_name}",
+    "DB_USER": credentials["username"],
+    "DB_PASSWORD": credentials["password"]
+}
+
+path = "/etc/ecommerce/app.env"
+
+with os.fdopen(
+    os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600),
+    "w"
+) as file:
+    for name, value in variables.items():
+        value = str(value)
+        if "\n" in value or "\r" in value:
+            raise ValueError("Valor de entorno invalido")
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        file.write(f'{name}="{escaped}"\n')
+
+os.chmod(path, 0o600)
+PY
+
+# 5. Configurar Tomcat para cargar las variables
+mkdir -p /etc/systemd/system/tomcat10.service.d
+
+cat > /etc/systemd/system/tomcat10.service.d/override.conf <<'EOF'
+[Service]
+EnvironmentFile=/etc/ecommerce/app.env
+EOF
+
+# 6. Iniciar Tomcat automaticamente
+systemctl daemon-reload
+systemctl enable --now tomcat10
+
+echo "Inicializacion del servidor completada."
