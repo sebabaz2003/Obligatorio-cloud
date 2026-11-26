@@ -74,8 +74,25 @@ output "secretsmanager_endpoint_id" {
   value = module.vpc_endpoints.secretsmanager_endpoint_id
 }
 
+output "ssm_endpoint_ids" {
+  value = module.vpc_endpoints.ssm_endpoint_ids
+}
+
 #ec2
 output "app_launch_template_id" {
   value = module.ec2.launch_template_id
 }
 
+#alb
+output "alb_dns_name" {
+  value = module.alb.alb_dns_name
+}
+
+output "alb_target_group_arn" {
+  value = module.alb.target_group_arn
+}
+
+#autoscaling
+output "asg_name" {
+  value = module.autoscaling.asg_name
+}

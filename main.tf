@@ -67,4 +67,28 @@ module "ec2" {
   db_secret_arn = module.rds.db_secret_arn
 }
 
+module "alb" {
+  source = "./modules/alb"
+
+  project_name = var.project_name
+
+  vpc_id                = module.networking.vpc_id
+  public_subnet_ids     = module.networking.public_subnet_ids
+  alb_security_group_id = module.security.alb_sg_id
+}
+
+module "autoscaling" {
+  source = "./modules/autoscaling"
+
+  project_name = var.project_name
+
+  private_app_subnet_ids = module.networking.private_app_subnet_ids
+
+  launch_template_id = module.ec2.launch_template_id
+
+  target_group_arn = module.alb.target_group_arn
+
+  launch_template_version = module.ec2.launch_template_latest_version
+}
+
 
